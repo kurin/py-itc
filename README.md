@@ -70,7 +70,7 @@ clock = itc.Stamp.load(bits)      # and turns it into a python object
 Time passes...
 
 ```python
-stuff = Stuff.wait_around()       # A or B waits here for something to happen
+stuff = Stuff.wait_around()       # A or B, call it B, waits here for something to happen
 Stuff.handle_stuff(stuff)         # and reacts to it, presumably changing internal state
 clock.event()                     # notes that an event happened
 state = Stuff.get_new_state()     # gets some kind of representation of that new state
@@ -80,7 +80,7 @@ TCPWizSendObj(o, clock, state)    # and sends the new clock to some other node
 And the other node handles it:
 
 ```python
-bits, state = TCPRecvFrEth()      # pull down the state and the clock object
+bits, state = TCPRecvFrEth()      # A pulls down the state and the clock object
 othclk = itc.Stamp.load(bits)
 if clock <= othclk:               # THIS node is strictly in the past of the node we just got the data from
     Stuff.update(state)           # this presumably means we can update our state to match the other node's state
@@ -90,3 +90,40 @@ clock = clock + othclk            # join the two clocks
 clock, othclk = clock.fork()      # and then fork it
 TCPWizSendObj(o, clock)           # and send it back
 ```
+
+Finally, it's important for B to replace its clock with the new
+clock, although you can skip this clock if the ID parts of the clock
+are the same.
+```python
+bits = TCPRecvFrEth()             # get the clock
+o = itc.Stamp.load(bits)          # load it
+if clock <= o and o <= clock:     # they are cotemporal
+    clock = o                     # replace it
+```
+
+This last step is necessary because of reasons.
+
+What's Really Happening (Kinda)
+-------------------------------
+
+So an interval tree clock is two parts, the interval tree and the
+clock.  Duh.
+
+The interval tree can conseptually represent the real line between
+0 and 1, or `(0, 1)`.  When a clock is forked, this line is split
+into `(0, .5)` and `(.5, 1)`.  When those lines are forked they are
+themselves split, and so on.  This is also known as the ID.
+
+This way, all IDs are guaranteed to be unique.
+
+When an event is registered, the clock is incremented.  The clock
+can also thought of as taking place in the space above the interval
+`(0, 1)`.  When it is incremented, the space above the line "owned"
+by the clock, represented by the value of the ID, is increased.
+For example, if my ID is `(0, .25)`, then I own the airspace above
+that interval and can increase it.
+
+If this all sounds like bullshit, don't worry, I didn't get it
+either.  Check out the awesome graphic at
+https://github.com/ricardobcl/Interval-Tree-Clocks.  And maybe read
+the rest of that, too.

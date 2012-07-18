@@ -271,7 +271,7 @@ class EventNode(object):
                 return True
             ev = self.clone()
             ev.leaf = False
-            return ev < other
+            return ev <= other
         return False
 
     def height(self):
