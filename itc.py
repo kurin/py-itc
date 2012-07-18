@@ -7,6 +7,9 @@ __version__ = '0.2.0'
 # basically doing this in the background while I watch Archer.  So,
 # you know, there may be some bugs.
 
+# This code is in the public domain, although I'd appreciate it if
+# you let me know if you use it.
+
 class IDNode(object):
     def __init__(self, val=None):
         self.left = None
