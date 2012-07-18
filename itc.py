@@ -475,10 +475,11 @@ class BinEncode(object):
         '''
         Encode the number n in b bits.
         '''
-        if b > 8:
-            raise RuntimeError("too many bits")
-        if n > 255:
-            raise RuntimeError("too big a byte")
+        while b > 8:
+            b -= 8
+            tn = (n & (0xff << (b - 8))) >> (b - 8)
+            self.bitpairs.append((tn, 8))
+            n ^= tn << b
         self.bitpairs.append((n, b))
 
     def add_number(self, num, base):
@@ -524,10 +525,11 @@ class BinDecode(object):
             ans = head >> shift & 0xff >> (8 - size)
             self.boff = shift
         else:
-            tail = ord(self.bits[self.offset + 1]) # fixme
-            ans = (((0xff >> (8 - self.boff)) & head) << (size - self.boff)) + (tail >> (8 - (size - self.boff)))
-            self.boff = 8 - (size - self.boff)
+            ans = ((0xff >> (8 - self.boff)) & head) << (size - self.boff)
+            bread = self.boff
+            self.boff = 8
             self.offset += 1
+            ans += self.decode(size - bread)
         return ans
 
     def decode_number(self, base):
