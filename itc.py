@@ -173,8 +173,8 @@ class EventNode(object):
         rtn = EventNode()
         rtn.leaf = self.leaf
         if not self.leaf:
-            rtn.left = self.left
-            rtn.right = self.right
+            rtn.left = self.left.clone()
+            rtn.right = self.right.clone()
         rtn.value = self.value
         return rtn
 
