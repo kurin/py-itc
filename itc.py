@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# I am copying this more or less verbatim from a C# library I in
+# turn copied from a Java library I found on github.  I'm also
+# basically doing this in the background while I watch Archer.  So,
+# you know, there may be some bugs.
+
 class IntervalTreeClock(object):
     pass
 
@@ -13,7 +18,7 @@ class IDNode(object):
         self.leaf = val is not None
 
     def __repr__(self):
-        return "ITC: %s"%self.enstring()
+        return "ID: %s"%self.enstring()
 
     def enstring(self):
         if self.leaf:
@@ -102,3 +107,157 @@ class IDNode(object):
         rtn.right = self.right + other.right
         rtn.normalize()
         return rtn
+
+class EventNode(object):
+    def __init__(self, val=0):
+        self.value = val
+        self.leaf = True
+
+    def get_leaf(self):
+        return self._leaf
+
+    def set_leaf(self, val):
+        if val:
+            self.left = None
+            self.right = None
+        else:
+            self.left = EventNode()
+            self.right = EventNode()
+        self._leaf = val
+
+    leaf = property(get_leaf, set_leaf)
+
+    def __repr__(self):
+        return "EN: %s"%self.enstring()
+
+    def enstring(self):
+        if self.leaf:
+            return str(self.value)
+        return "(%s, %s, %s)"%(self.value, self.left.enstring(), self.right.enstring())
+
+    def clone(self):
+        rtn = EventNode()
+        rtn.leaf = self.leaf
+        if not self.leaf:
+            rtn.left = self.left
+            rtn.right = self.right
+        rtn.value = self.value
+        return rtn
+
+    def __add__(self, n):
+        '''
+        Known as "Lift" (static method) in the Java ITC implementation
+        '''
+        rtn = self.clone()
+        rtn.value += n
+        return rtn
+
+    def __iadd__(self, n):
+        '''
+        Known as "Lift" in the Java ITC implementation
+        '''
+        self.value += n
+        return self
+
+    def __isub__(self, n):
+        '''
+        aka "Sink"
+        '''
+        self.value -= n
+        return self
+
+    def __sub__(self, n):
+        rtn = self.clone()
+        rtn.value -= n
+        return rtn
+
+    def __mul__(self, other):
+        '''
+        Join.  Probably this should be __mul__ for both ID and Event nodes, for consistency.
+        '''
+        rtn = self.clone()
+        if not self.leaf and not other.leaf:
+            if self.value > other.value:
+                return other * self
+            else:
+                d = other.value - self.value
+                other.left += d
+                other.right += d
+                rtn.left = self.left * other.left
+                rtn.right = self.right * other.fight
+                return rtn
+        elif self.leaf and not other.leaf:
+            rtn.leaf = False
+            return rtn * other
+        elif not self.leaf and other.leaf
+            oth = other.clone()
+            oth.leaf = False
+            return self * oth
+        rtn.value = max(self.value, other.value)
+        return rtn
+
+    def normalize(self):
+        if self.left:
+            self.left.normalize()
+        if self.right:
+            self.right.normalize()
+        if not self.leaf and self.left.leaf and self.right.leaf and self.left.value == self.right.value:
+            self.value = left.value
+            self.leaf = True
+        elif not self.leaf
+            mm = min(self.left.value, self.right.value)
+            self += mm
+            self.left -= mm
+            self.right -= mm
+
+    def __le__(self, other):
+        if not self.leaf and not other.leaf:
+            if self.value > other.value:
+                return False
+            xl1 = self.left + self.value
+            xl2 = other.left + other.value
+            if not xl1 <= xl2:
+                return False
+            xr1 = self.right + self.value
+            xr2 = other.right + other.value
+            if not xr1 <= xr2:
+                return False
+            return True
+        elif not self.leaf and other.leaf:
+            if self.value > other.value:
+                return False
+            xl1 = self.left + self.value
+            if not xl1 <= other:
+                return False
+            xr1 = self.right + self.value
+            if not xr1 <= other:
+                return False
+            return True
+        elif self.leaf and other.leaf:
+            return self.value <= other.value
+        elif self.leaf and not other.leaf:
+            if self.value < other.value:
+                return True
+            ev = self.clone()
+            ev.leaf = False
+            return ev < other
+        return False
+
+    def height(self):
+        '''
+        Is destructive
+        '''
+        if not self.leaf:
+            self.left.height()
+            self.right.height()
+            self.value += max(self.left.value, self.right.value)
+            self.leaf = True
+
+    def __eq__(self, other):
+        if not other: # probably don't need this check but ok
+            return False
+        if self.leaf and other.leaf and self.value == other.value:
+            return True
+        if self.value == other.value and self.left == other.left and self.right == other.right:
+            return True
+        return False
