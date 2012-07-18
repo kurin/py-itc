@@ -109,7 +109,7 @@ What's Really Happening (Kinda)
 So an interval tree clock is two parts, the interval tree and the
 clock.  Duh.
 
-The interval tree can conseptually represent the real line between
+The interval tree can conceptually represent the real line between
 0 and 1, or `(0, 1)`.  When a clock is forked, this line is split
 into `(0, .5)` and `(.5, 1)`.  When those lines are forked they are
 themselves split, and so on.  This is also known as the ID.
