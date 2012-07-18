@@ -233,7 +233,7 @@ class EventNode(object):
         if self.right:
             self.right.normalize()
         if not self.leaf and self.left.leaf and self.right.leaf and self.left.value == self.right.value:
-            self.value = left.value
+            self.value = self.left.value
             self.leaf = True
         elif not self.leaf:
             mm = min(self.left.value, self.right.value)
@@ -413,6 +413,8 @@ class Stamp(object):
 	        # here 1000 is "some large constant" that needs to be
             # larger than the tree height of e
             return self.grow() + 1000
+        elif not self.idn.leaf and self.idn.left.leaf and self.idn.left.value == 0:
+            return Stamp(self.idn.right, self.evn.right).grow() + 1
         elif not self.idn.leaf and self.idn.right.leaf and self.idn.right.value == 0:
             return Stamp(self.idn.left, self.evn.left).grow() + 1
         elif not self.idn.leaf:
@@ -449,6 +451,7 @@ class Stamp(object):
             Stamp(self.idn.left, self.evn.left).fill()
             Stamp(self.idn.right, self.evn.right).fill()
             self.evn.normalize()
+        return self
 
     def encode(self):
         be = BinEncode()
