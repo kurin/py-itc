@@ -108,6 +108,27 @@ class IDNode(object):
         rtn.normalize()
         return rtn
 
+    def encode(self, be):
+        if self.leaf:
+            be.add_ints(0, 2)
+            be.add_ints(self.value, 1)
+        elif not self.leaf and self.left.leaf and self.left.value == 0 and \
+            (not self.right.leaf or self.right.value == 1):
+            be.add_ints(1, 2)
+            self.right.encode(be)
+        elif not self.leaf and self.right.leaf and self.right.value == 0 and \
+            (not self.left.leaf or self.left.value == 1):
+            be.add_ints(2, 2)
+            self.left.encode(be)
+        else:
+            be.add_ints(3, 2)
+            self.left.encode(be)
+            self.right.encode(be)
+
+    @staticmethod
+    def load(be):
+        pass
+
 class EventNode(object):
     def __init__(self, val=0):
         self.value = val
@@ -346,3 +367,84 @@ class Stamp(object):
             Stamp(self.idn.left, self.evn.left).fill()
             Stamp(self.idn.right, self.evn.right).fill()
             self.evn.normalize()
+
+class BinEncode(object):
+    def __init__(self):
+        self.bitpairs = []
+        self.pitbears = "whoa scary"
+
+    def add_ints(self, n, b):
+        '''
+        Encode the number n in b bits.
+        '''
+        self.bitpairs.append((n, b))
+
+    def as_bits(self):
+        blft = 8
+        pack = 0
+        bstream = []
+        for number, bits in self.bitpairs:
+            adj = blft - bits
+            if adj >= 0:
+                blft = adj
+                pack |= number << adj
+            elif adj < 0:
+                pack |= number >> -adj
+                bstream.append(pack)
+                pack = 0
+                blft = 8 + adj
+                pack |= (number << blft) & 0xff
+            if blft == 0:
+                bstream.append(pack)
+                pack = 0
+                blft = 8
+        bstream.append(pack)
+        return b"".join([chr(x) for x in bstream])
+
+class BinDecode(object):
+    def __init__(self, bs):
+        self.bits = bs
+        self.offset = 0
+        self.boff = 8
+
+    def decode(self, size):
+        head = ord(self.bits[self.offset])
+        shift = self.boff - size
+        if shift >= 0:
+            ans = head >> shift & 0xff >> (8 - size)
+            self.boff = shift
+        else:
+            tail = ord(self.bits[self.offset + 1]) # fixme
+            ans = (((0xff >> (8 - self.boff)) & head) << (size - self.boff)) + (tail >> (8 - (size - self.boff)))
+            self.boff = 8 - (size - self.boff)
+            self.offset += 1
+        return ans
+
+def test_be_and_bd():
+    import random
+    def bits_to_store(n):
+        b = 1
+        while n >> 1:
+            n >>= 1
+            b += 1
+        return b
+    k = [int(256*random.random()) for i in xrange(10000)]
+    be = BinEncode()
+    bcnts = []
+    for x in k:
+        b = bits_to_store(x)
+        bits = random.randint(b, 8)
+        bcnts.append(bits)
+        be.add_ints(x, bits)
+    bstr = be.as_bits()
+    print len(bstr)
+    bd = BinDecode(bstr)
+    ans = []
+    for b in bcnts:
+        a = bd.decode(b)
+        ans.append(a)
+    print k == ans
+
+if __name__ == '__main__':
+    test_be_and_bd()
+    
