@@ -7,11 +7,6 @@ __version__ = '0.1.0'
 # basically doing this in the background while I watch Archer.  So,
 # you know, there may be some bugs.
 
-class IntervalTreeClock(object):
-    pass
-
-ITC = IntervalTreeClock
-
 class IDNode(object):
     def __init__(self, val=None):
         self.left = None
