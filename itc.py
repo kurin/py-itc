@@ -212,22 +212,28 @@ class EventNode(object):
         rtn = self.clone()
         if not self.leaf and not other.leaf:
             if self.value > other.value:
-                return other * self
+                rtn = other * self
             else:
                 d = other.value - self.value
                 other.left += d
                 other.right += d
                 rtn.left = self.left * other.left
                 rtn.right = self.right * other.right
-                return rtn
+            rtn.normalize()
+            return rtn
         elif self.leaf and not other.leaf:
             rtn.leaf = False
-            return rtn * other
+            rtn = rtn * other
+            rtn.normalize()
+            return rtn
         elif not self.leaf and other.leaf:
             oth = other.clone()
             oth.leaf = False
-            return self * oth
+            rtn = self * oth
+            rtn.normalize()
+            return rtn
         rtn.value = max(self.value, other.value)
+        rtn.normalize()
         return rtn
 
     def normalize(self):
@@ -236,7 +242,7 @@ class EventNode(object):
         if self.right:
             self.right.normalize()
         if not self.leaf and self.left.leaf and self.right.leaf and self.left.value == self.right.value:
-            self.value = self.left.value
+            self.value += self.left.value
             self.leaf = True
         elif not self.leaf:
             mm = min(self.left.value, self.right.value)
@@ -292,7 +298,9 @@ class EventNode(object):
             return False
         if self.leaf and other.leaf and self.value == other.value:
             return True
-        if self.value == other.value and self.left == other.left and self.right == other.right:
+        if not self.leaf and not other.leaf and \
+            self.value == other.value and self.left == other.left and \
+            self.right == other.right:
             return True
         return False
 
