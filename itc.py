@@ -184,12 +184,12 @@ class EventNode(object):
                 other.left += d
                 other.right += d
                 rtn.left = self.left * other.left
-                rtn.right = self.right * other.fight
+                rtn.right = self.right * other.right
                 return rtn
         elif self.leaf and not other.leaf:
             rtn.leaf = False
             return rtn * other
-        elif not self.leaf and other.leaf
+        elif not self.leaf and other.leaf:
             oth = other.clone()
             oth.leaf = False
             return self * oth
@@ -204,7 +204,7 @@ class EventNode(object):
         if not self.leaf and self.left.leaf and self.right.leaf and self.left.value == self.right.value:
             self.value = left.value
             self.leaf = True
-        elif not self.leaf
+        elif not self.leaf:
             mm = min(self.left.value, self.right.value)
             self += mm
             self.left -= mm
@@ -261,3 +261,88 @@ class EventNode(object):
         if self.value == other.value and self.left == other.left and self.right == other.right:
             return True
         return False
+
+class Stamp(object):
+    def __init__(self, idn=None, evn=None):
+        if idn:
+            self.idn = idn
+        else:
+            self.idn = IDNode(1)
+        if evn:
+            self.evn = evn
+        else:
+            self.evn = EventNode()
+
+    def fork(self):
+        lid, rid = self.idn.split()
+        l = Stamp(lid, self.evn.clone())
+        r = Stamp(rid, self.evn.clone())
+        return l, r
+
+    def __add__(self, other):
+        idn = self.idn + other.idn
+        evn = self.evn * other.evn
+        return Stamp(idn, evn)
+
+    def __le__(self, other):
+        return self.evn <= other.evn
+
+    def peek(self):
+        idn = IDNode(0)
+        evn = self.evn.clone()
+        return Stamp(idn, evn)
+
+    def event(self):
+        old = self.evn.clone()
+        self.fill()
+        if old == self.evn:
+            self.grow()
+
+    def grow(self):
+        '''
+        This gets kind of weird.
+        '''
+        if self.idn.leaf and self.idn.value == 1 and self.evn.leaf:
+            self.evn += 1
+            return 0
+        elif self.evn.leaf:
+            self.evn.leaf = False
+	        # here 1000 is "some large constant" that needs to be
+            # larger than the tree height of e
+            return self.grow() + 1000
+        elif not self.idn.leaf and self.idn.right.leaf and self.idn.right.value == 0:
+            return Stamp(self.idn.left, self.evn.left).grow() + 1
+        elif not self.idn.leaf:
+            e1 = self.evn.left.clone()
+            e2 = self.evn.right.clone()
+            costl = Stamp(self.idn.left, self.evn.left).grow()
+            costr = Stamp(self.idn.right, self.evn.right).grow()
+            if costl < costr:
+                self.evn.right = e2
+                return costl + 1
+            else:
+                self.evn.left = e1
+                return costr + 1
+        return -1
+
+    def fill(self):
+        if self.idn.leaf and self.idn.value == 0:
+            pass
+        elif self.idn.leaf and self.idn.value == 1:
+            self.evn.height()
+        elif self.evn.leaf:
+            pass
+        elif not self.idn.leaf and self.idn.left.leaf and self.idn.left.value == 1:
+            Stamp(self.idn.right, self.evn.right).fill()
+            self.evn.left.height()
+            self.evn.left.value = max(self.evn.left.value, self.evn.right.value)
+            self.evn.normalize()
+        elif not self.idn.leaf and self.idn.right.leaf and self.idn.right.value == 1:
+            Stamp(self.idn.left, self.evn.left).fill()
+            self.evn.right.height()
+            self.evn.right.value = max(self.evn.right.value, self.evn.left.value)
+            self.evn.normalize()
+        elif not self.idn.leaf:
+            Stamp(self.idn.left, self.evn.left).fill()
+            Stamp(self.idn.right, self.evn.right).fill()
+            self.evn.normalize()
