@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 # I am copying this more or less verbatim from a C# library I in
 # turn copied from a Java library I found on github.  I'm also
