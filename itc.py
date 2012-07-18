@@ -126,8 +126,21 @@ class IDNode(object):
             self.right.encode(be)
 
     @staticmethod
-    def load(be):
-        pass
+    def load(bd):
+        root = IDNode()
+        type = bd.decode(2)
+        if type == 0:
+            return IDNode(bd.decode(1))
+        elif type == 1:
+            root.left = IDNode(0)
+            root.right = IDNode.load(bd)
+        elif type == 2:
+            root.left = IDNode.load(bd)
+            root.right = IDNode(0)
+        else:
+            root.left = IDNode.load(bd)
+            root.right = IDNode.load(bd)
+        return root
 
 class EventNode(object):
     def __init__(self, val=0):
@@ -283,6 +296,78 @@ class EventNode(object):
             return True
         return False
 
+    def encode(self, be):
+        if self.leaf:
+            be.add_ints(1, 1) # dt
+            be.add_number(self.value, 2)
+            return
+
+        be.add_ints(0, 1) # dt
+        if self.value == 0 and self.left.leaf and self.left.value == 0 and \
+            (not self.right.leaf or self.right.value > 0):
+            be.add_ints(0, 2) # flag
+            self.right.encode(be)
+        elif self.value == 0 and self.right.leaf and self.right.value == 0 and \
+            (not self.left.leaf or self.left.value > 0):
+            be.add_ints(1, 2) # flag
+            self.left.encode(be)
+        elif self.value > 0 and self.left.leaf and self.left.value == 0 and \
+            (not self.right.leaf or self.right.value > 0):
+            be.add_ints(3, 2) # flag
+            be.add_ints(0, 1) # vflag
+            be.add_ints(0, 1) # cflag
+            be.add_number(self.value, 2)
+            self.right.encode(be)
+        elif self.value > 0 and self.right.leaf and self.right.value == 0 and \
+            (not self.left.leaf or self.left.value > 0):
+            be.add_ints(3, 2) # flag
+            be.add_ints(0, 1) # vflag
+            be.add_ints(1, 1) # cflag
+            be.add_number(self.value, 2)
+            self.left.encode(be)
+        else:
+            be.add_ints(3, 2) # flag
+            be.add_ints(1, 1) # vflag
+            be.add_number(self.value, 2)
+            self.left.encode(be)
+            self.right.encode(be)
+
+    @staticmethod
+    def load(bd):
+        dt = bd.decode(1)
+        if dt == 1:
+            return EventNode(bd.decode_number(2))
+        root = EventNode()
+        flag = bd.decode(2)
+        if flag == 0:
+            root.leaf = False
+            root.value = 0
+            root.right = EventNode.load(bd)
+        elif flag == 1:
+            root.leaf = False
+            root.value = 0
+            root.left = EventNode.load(bd)
+        elif flag == 2:
+            root.leaf = False
+            root.value = 0
+            root.left = EventNode.load(bd)
+            root.right = EventNode.load(bd)
+        else:
+            root.leaf = False
+            vflag = bd.decode(1)
+            if vflag == 0:
+                cflag = bd.decode(1)
+                root.value = bd.decode_number(2)
+                if cflag == 0:
+                    root.right = EventNode.load(bd)
+                else:
+                    root.left = EventNode.load(bd)
+            else:
+                root.value = bd.decode_number(2)
+                root.left = EventNode.load(bd)
+                root.right = EventNode.load(bd)
+        return root
+
 class Stamp(object):
     def __init__(self, idn=None, evn=None):
         if idn:
@@ -368,6 +453,22 @@ class Stamp(object):
             Stamp(self.idn.right, self.evn.right).fill()
             self.evn.normalize()
 
+    def encode(self):
+        be = BinEncode()
+        self.idn.encode(be)
+        self.evn.encode(be)
+        return be.as_bits()
+
+    @staticmethod
+    def load(bstr):
+        bd = BinDecode(bstr)
+        idn = IDNode.load(bd)
+        evn = EventNode.load(bd)
+        return Stamp(idn, evn)
+
+    def __repr__(self):
+        return "<%s; %s>"%(self.idn.enstring(), self.evn.enstring())
+
 class BinEncode(object):
     def __init__(self):
         self.bitpairs = []
@@ -377,7 +478,19 @@ class BinEncode(object):
         '''
         Encode the number n in b bits.
         '''
+        if b > 8:
+            raise RuntimeError("too many bits")
+        if n > 255:
+            raise RuntimeError("too big a byte")
         self.bitpairs.append((n, b))
+
+    def add_number(self, num, base):
+        if num < 2 ** base:
+            self.add_ints(0, 1)
+            self.add_ints(num, base)
+        else:
+            self.add_ints(1, 1)
+            self.add_number(num - 2 ** base, base + 1)
 
     def as_bits(self):
         blft = 8
@@ -420,6 +533,12 @@ class BinDecode(object):
             self.offset += 1
         return ans
 
+    def decode_number(self, base):
+        flag = self.decode(1)
+        if flag == 0:
+            return 2 ** base - 4 + self.decode(base)
+        return self.decode_number(base + 1)
+
 def test_be_and_bd():
     import random
     def bits_to_store(n):
@@ -445,6 +564,13 @@ def test_be_and_bd():
         ans.append(a)
     print k == ans
 
+def test_stamp_stuff():
+    s = Stamp()
+    l, r = s.fork()
+    r.event()
+    print r
+    print Stamp.load(r.encode())
+
 if __name__ == '__main__':
     test_be_and_bd()
-    
+    test_stamp_stuff()
