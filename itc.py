@@ -476,10 +476,10 @@ class BinEncode(object):
         Encode the number n in b bits.
         '''
         while b > 8:
-            b -= 8
             tn = (n & (0xff << (b - 8))) >> (b - 8)
             self.bitpairs.append((tn, 8))
-            n ^= tn << b
+            n ^= tn << (b - 8)
+            b -= 8
         self.bitpairs.append((n, b))
 
     def add_number(self, num, base):
@@ -546,12 +546,12 @@ def test_be_and_bd():
             n >>= 1
             b += 1
         return b
-    k = [int(256*random.random()) for i in xrange(10000)]
+    k = [int(65536*random.random()) for i in xrange(10000)]
     be = BinEncode()
     bcnts = []
     for x in k:
         b = bits_to_store(x)
-        bits = random.randint(b, 8)
+        bits = random.randint(b, 16)
         bcnts.append(bits)
         be.add_ints(x, bits)
     bstr = be.as_bits()
