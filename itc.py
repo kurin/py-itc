@@ -34,6 +34,17 @@ class IDNode(object):
         rtn.leaf = self.leaf
         return rtn
 
+    def __eq__(self, other):
+        if self.leaf != other.leaf:
+            return False
+        if self.leaf and self.value != other.value:
+            return False
+        if self.leaf and self.value == other.value:
+            return True
+        # we're guaranteed not to be a leaf here, yes?
+        # be paranoid anyway
+        return self.left == other.left and self.right == other.right
+
     def split(self):
         id1 = IDNode()
         id2 = IDNode()
@@ -411,6 +422,19 @@ class Stamp(object):
         self.fill()
         if old == self.evn:
             self.grow()
+
+    def fold(self, other):
+        '''
+	    Joins two stamps, and then immediately forks them and returns
+    	only the one with the same ID as this stamp.
+        '''
+        j = self + other
+        a, b = j.fork()
+        if a.idn == self.idn:
+            return a
+        if b.idn == self.idn:
+            return b
+        # yikes
 
     def grow(self):
         '''
