@@ -41,8 +41,6 @@ class IDNode(object):
             return False
         if self.leaf and self.value == other.value:
             return True
-        # we're guaranteed not to be a leaf here, yes?
-        # be paranoid anyway
         return self.left == other.left and self.right == other.right
 
     def split(self):
