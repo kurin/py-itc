@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 # I am copying this more or less verbatim from a C# library I in
 # turn copied from a Java library I found on github.  I'm also
@@ -494,6 +494,7 @@ class Stamp(object):
         self.idn.encode(be)
         self.evn.encode(be)
         return be.as_bits()
+    dump = encode
 
     @staticmethod
     def load(bstr):
