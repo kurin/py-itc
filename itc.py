@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 # I am copying this more or less verbatim from a C# library I in
 # turn copied from a Java library I found on github.  I'm also
@@ -401,6 +401,9 @@ class Stamp(object):
         l = Stamp(lid, self.evn.clone())
         r = Stamp(rid, self.evn.clone())
         return l, r
+
+    def __cmp__(self, other):
+        raise ValueError
 
     def __add__(self, other):
         idn = self.idn + other.idn
